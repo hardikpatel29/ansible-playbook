@@ -1,0 +1,47 @@
+---
+
+- hosts: all
+  become: yes
+  gather_facts: true
+  tasks:
+
+
+    - name: update cache
+      apt: update_cache=yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: install updates (CentOS)
+      yum:
+        update_only: yes
+        update_cache: yes
+      when: ansible_distribution == "CentOS"
+
+
+    - name: install apache
+      apt: name=apache2 state=present
+      when: ansible_distribution == "Ubuntu"
+    
+    - name: adding repo
+      apt_repository: repo="ppa:ondrej/php"
+      when: ansible_distribution == "Ubuntu"
+
+    - name: update cache
+      apt: update_cache=yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: install php8
+      apt: name=php8.0 state=present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: add php support for apache
+      apt:
+       name: libapache2-mod-php
+      when: ansible_distribution == "Ubuntu"
+
+    - name: install apache and php for CentOS servers
+      dnf:
+        name:
+         - httpd
+         - php
+        state: latest
+      when: ansible_distribution == "CentOS"

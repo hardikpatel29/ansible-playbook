@@ -1,0 +1,108 @@
+---
+- name: Install Postgresql 13
+  hosts: all
+  gather_facts: true
+  become: true
+  tasks:
+
+    - name: Add postgresql apt repository key
+      apt_key:
+        url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Add postgresql apt repository
+      apt_repository:
+        repo: "deb http://apt.postgresql.org/pub/repos/apt/ focal-pgdg main"
+        state: present
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Install postgresql dependencies
+      apt:
+        name: acl
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Install postgresql
+      apt:
+        name: "postgresql-13"
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Install python-psycopg2
+      apt:
+        name: python3-psycopg2
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Ensure postgresql is enabled running
+      service:
+        name: postgresql
+        enabled: yes
+        state: started
+
+    - name: Change listen_addresses to '*'
+      lineinfile:
+        dest: "/etc/postgresql/13/main/postgresql.conf"
+        regexp: "^#listen_addresses"
+        line: "listen_addresses = '*'"
+        state: present
+        backup: yes
+      notify:
+        - restart postgresql
+
+    - name: Configure pg_hba.conf
+      template:
+        src: ./pg_hba.conf.j2
+        dest: "/etc/postgresql/13/main/pg_hba.conf"
+        owner: postgres
+      notify:
+        - restart postgresql
+
+    - name: "Ensure the database temp is created"
+      become: yes
+      become_user: postgres
+      postgresql_db:
+        name: testing
+        encoding: UTF-8
+        lc_collate: en_US.UTF-8
+        lc_ctype: en_US.UTF-8
+        template: template0
+
+    - name: "create user for db"
+      become: yes
+      become_user: postgres
+      postgresql_user:
+        state: present
+        name: test
+        password: testing123
+
+
+    - name: "Grant db user access to app db"
+      postgresql_privs:
+        type: database
+        database: testing
+        roles: test
+        grant_option: no
+        privs: all
+      become: yes
+      become_user: postgres
+
+
+  handlers:
+
+    - name: enable postgresql
+      service: name=postgresql enabled=yes
+
+    - name: start postgresql
+      service: name=postgresql state=started
+
+    - name: stop postgresql
+      service: name=postgresql state=stopped
+
+    - name: restart postgresql
+      service: name=postgresql state=restarted
+
+    - name: reload postgresql
+      service: name=postgresql state=reloaded

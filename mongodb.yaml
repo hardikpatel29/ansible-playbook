@@ -1,0 +1,47 @@
+---
+- name: Install MongoDB
+  hosts: all
+  gather_facts: true
+  become: true
+  tasks:
+
+    - name: install prerequisites
+      apt:
+        name:
+          - gnupg
+        state: present
+      when: ansible_distribution == "Ubuntu"
+    
+    - name: Add mongo apt repository key
+      apt_key:
+        url: https://www.mongodb.org/static/pgp/server-5.0.asc 
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Add mongo apt repository
+      apt_repository:
+        repo: "deb https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse"
+        state: present
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Install mongo
+      apt:
+        name: "mongodb-org"
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: change bind address to '0.0.0.0'
+      lineinfile:
+        dest: "/etc/mongod.conf"
+        regexp: "127.0.0.1"
+        line: "  bindIp: 0.0.0.0"
+        state: present
+        backup: yes
+      notify:
+        - restart mongod
+
+
+  handlers:
+    - name: restart mongod
+      service: name=mongod state=restarted

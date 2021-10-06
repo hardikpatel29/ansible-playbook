@@ -1,0 +1,30 @@
+---
+
+- hosts: all
+  become: yes
+  tasks:
+  
+    # - name: update cache
+    #   apt: update_cache=yes
+    #   when: ansible_distribution == "Ubuntu"
+
+    - name: remove apache
+      apt: name=apache2 state=absent
+      when: ansible_distribution == "Ubuntu"
+    
+    - name: remove php8
+      apt: name=php8.0 state=absent
+      when: ansible_distribution == "Ubuntu"
+
+    - name: remove php support for apache
+      apt:
+       name: libapache2-mod-php
+       state: absent
+      when: ansible_distribution == "Ubuntu"
+
+
+    - name: Clean unwanted olderstuff
+      apt:
+       autoremove: yes
+       purge: yes
+      when: ansible_distribution == "Ubuntu"
